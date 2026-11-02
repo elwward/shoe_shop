@@ -22,7 +22,7 @@ class App(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowIcon(QIcon(str(ROOT_DIR / "resources" / "Icon.png")))
-        self.setWindowTitle("Обувной магазин")
+        self.setWindowTitle("ShoeShop — Обувной магазин")
         self.stacked = QStackedWidget()
         self.login_window = LoginWindow(self)
         self.stacked.addWidget(self.login_window)
