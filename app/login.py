@@ -82,7 +82,7 @@ class LoginWindow(QWidget):
             full_name = get_user_full_name(login)
             self.parent_app.show_main_window(role, full_name)
         else:
-            QMessageBox.critical(self, "Ошибка", "Неверный логин или пароль")
+            QMessageBox.critical(self, "Ошибка", "Неверный логин или пароль. Проверьте введённые данные и раскладку клавиатуры.")
 
     def handle_guest(self):
         self.parent_app.show_main_window("guest", "Гость")
