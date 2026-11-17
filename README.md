@@ -118,6 +118,55 @@ docker compose start   # запустить снова
 поэтому при пересоздании контейнера `db` данные потребуется
 импортировать заново.
 
-## Автор
+## Постоянное хранение и сети
+
+### Именованный том
+
+Данные PostgreSQL хранятся в именованном томе `db_data`
+(фактическое имя с префиксом проекта — `shoe_shop_db_data`),
+подключённом к `/var/lib/postgresql/data` в сервисе `db`. Том
+сохраняется при остановке, удалении и пересоздании контейнеров
+(`docker compose down`, `up -d --force-recreate db`).
+
+### Резервное копирование и восстановление
+
+```powershell
+# Резервная копия (каталог backups/ исключён из Git)
+mkdir backups
+docker compose exec db pg_dump -U shoe_user -d db_for_store -f /tmp/shoe_store_before_volume.sql
+docker compose cp db:/tmp/shoe_store_before_volume.sql ./backups/shoe_store_before_volume.sql
+
+# Восстановление (в пустую базу нового тома)
+docker compose cp ./backups/shoe_store_before_volume.sql db:/tmp/restore.sql
+docker compose exec -T db psql -v ON_ERROR_STOP=1 -U shoe_user -d db_for_store -f /tmp/restore.sql
+```
+
+Восстановление выполняют только в пустую базу. Если таблицы уже
+существуют (`relation already exists`), повторный импорт не выполняют,
+пока не выяснено состояние тома.
+
+### Сеть
+
+Оба сервиса подключены к пользовательской bridge-сети `shoe-backend`:
+внутри неё контейнеры обращаются по именам сервисов (db-check — к
+`db:5432`). Порт PostgreSQL опубликован только на локальном интерфейсе:
+`127.0.0.1:5433:5432` — приложение Windows подключается к `localhost:5433`.
+Публикация `0.0.0.0:5433:5432` для локальной учебной базы не требуется.
+
+```powershell
+docker network ls                          # сеть shoe_shop_shoe-backend
+docker network inspect shoe_shop_shoe-backend
+docker compose port db 5432                # 127.0.0.1:5433
+```
+
+### Разница команд остановки
+
+| Команда | Результат |
+|---|---|
+| `docker compose stop` | Останавливает контейнеры, том сохраняется |
+| `docker compose down` | Удаляет контейнеры и сети проекта, именованный том сохраняется |
+| `docker compose down -v` | Удаляет также именованные тома — **не выполнять**: приведёт к потере базы (есть резервная копия в `backups/`) |
+
+### Автор
 
 Григорьян С. А., группа ЩПКО-02-23
