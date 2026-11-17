@@ -31,7 +31,92 @@
 - `app/` — модули приложения (вход, товары, заказы, работа с БД)
 - `resources/` — изображения, логотип, иконка
 - `database/` — скрипт базы данных и файлы импорта Excel
+- `docker/db-check/` — вспомогательный сервис проверки БД (Dockerfile, check_db.py)
 - `docs/` — ER-диаграмма
+
+## Запуск PostgreSQL через Docker Compose
+
+### Предварительные требования
+
+- Docker Desktop с Linux-контейнерами (Docker Engine + Compose v2):
+  `docker --version`, `docker compose version`
+- Git-репозиторий проекта
+
+### Настройка .env
+
+1. Скопируйте `.env.example` в `.env`:
+   `Copy-Item .env.example .env`
+2. Замените `POSTGRES_PASSWORD` на собственный локальный пароль.
+   Файл `.env` исключён из Git через `.gitignore` — настоящий пароль в
+   репозиторий не попадает.
+
+### Команды запуска
+
+```powershell
+docker compose config --quiet        # проверка конфигурации
+docker compose up --build -d         # запуск сервисов db и db-check
+docker compose ps                    # состояние сервисов
+docker compose logs --tail=40 db     # журналы PostgreSQL
+docker compose run --rm db-check     # одноразовая проверка подключения
+```
+
+Сервис `db` (PostgreSQL 14) публикуется на `127.0.0.1:5433` (порт Windows
+задаётся переменной `POSTGRES_HOST_PORT`, порт внутри контейнера — 5432).
+Сервис `db-check` — одноразовый диагностический контейнер: при успешном
+выполнении его статус `Exited (0)` является нормальным, в журнале должна
+быть строка вида `OK: база=db_for_store; таблиц=N`.
+
+### Импорт базы данных
+
+SQL-скрипт сам создаёт базу `db_for_store` и переключается в неё
+(`CREATE DATABASE` + `\c`). При первом запуске, когда база ещё не создана:
+
+```powershell
+docker compose cp database/shoe_store.sql db:/tmp/shoe_store.sql
+docker compose exec -T db psql -v ON_ERROR_STOP=1 -U shoe_user -d shoe_store -f /tmp/shoe_store.sql
+```
+
+При чистом пересоздании контейнера база `db_for_store` создаётся при
+инициализации, поэтому первую команду скрипта (`CREATE DATABASE`)
+игнорируют — импорт выполняют без `ON_ERROR_STOP`:
+
+```powershell
+docker compose exec -T db psql -U shoe_user -d postgres -f /tmp/shoe_store.sql
+```
+
+Заполнение таблиц данными из Excel:
+
+```powershell
+python app\import_from_excel.py
+```
+
+### Подключение приложения
+
+В `config.ini` укажите:
+
+```ini
+[database]
+host = localhost
+port = 5433
+name = db_for_store
+user = shoe_user
+password = ВАШ_ЛОКАЛЬНЫЙ_ПАРОЛЬ
+```
+
+Порт 5433 занят? Измените `POSTGRES_HOST_PORT` в `.env` и перезапустите
+Compose, затем обновите порт в `config.ini`.
+
+### Остановка
+
+```powershell
+docker compose stop    # остановить сервисы (данные сохраняются)
+docker compose start   # запустить снова
+```
+
+Не выполняйте `docker compose down -v` без необходимости: именованный
+том для данных пока не настроен (планируется в практической работе №13),
+поэтому при пересоздании контейнера `db` данные потребуется
+импортировать заново.
 
 ## Автор
 
