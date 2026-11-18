@@ -1,6 +1,7 @@
 # database.py
 
 import configparser
+import sys
 from pathlib import Path
 
 import psycopg2
@@ -10,9 +11,16 @@ import string
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
+def config_path():
+    """Путь к config.ini: рядом с EXE в упакованном режиме, иначе в корне проекта."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / "config.ini"
+    return ROOT_DIR / "config.ini"
+
+
 def load_db_config():
     config = configparser.ConfigParser()
-    path = ROOT_DIR / "config.ini"
+    path = config_path()
     if not path.exists():
         raise FileNotFoundError(
             "Не найден файл config.ini. Скопируйте config.ini.example в config.ini "

@@ -167,6 +167,33 @@ docker compose port db 5432                # 127.0.0.1:5433
 | `docker compose down` | Удаляет контейнеры и сети проекта, именованный том сохраняется |
 | `docker compose down -v` | Удаляет также именованные тома — **не выполнять**: приведёт к потере базы (есть резервная копия в `backups/`) |
 
-### Автор
+### Сборка Windows-приложения (PyInstaller)
+
+Сборка выполняется в Windows (Python 3.14, PyInstaller 6.22.3) в режиме
+onedir. В репозитории сохраняется spec-файл `ShoeStore.spec`, результат
+сборки (`build/`, `dist/`) и комплект поставки в Git не попадают.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt pyinstaller
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onedir --name ShoeStore --paths app --hidden-import login --hidden-import main_window --hidden-import products --hidden-import orders --hidden-import database --add-data "resources;resources" main.py
+```
+
+Особенности проекта:
+
+- `main.py` добавляет каталог `app/` в `sys.path` и импортирует модули
+  динамически, поэтому для сборки нужны `--paths app` и `--hidden-import`
+  для каждого модуля (`login`, `main_window`, `products`, `orders`, `database`);
+- каталог `resources` включается параметром `--add-data "resources;resources"`;
+- `config.ini` в упакованном режиме читается из каталога рядом с
+  `ShoeStore.exe` (см. `app/database.py`, функция `config_path()`),
+  поэтому настройки можно менять без пересборки;
+- для повторной сборки достаточно `python -m PyInstaller --noconfirm --clean ShoeStore.spec`.
+
+Передача пользователю: комплект `ShoeStore-release` (сборка onedir целиком,
+`deployment/`, `config.ini.example`, README.md, INSTALL.md) — инструкция
+по установке в `INSTALL.md`.
+
+## Автор
 
 Григорьян С. А., группа ЩПКО-02-23

@@ -30,3 +30,8 @@ docs/_*.py
 
 # Резервные копии БД
 backups/
+
+# Комплект поставки и сборка
+ShoeStore-release/
+ShoeStore-release.zip
+*.spec.bak
